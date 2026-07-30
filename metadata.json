@@ -1,0 +1,8 @@
+{
+  "name": "Ivoire Élevage - Gestion Holding",
+  "description": "Application complète de gestion agro-pastorale pour IVOIRE ÉLEVAGE (Aviculture, Porciculture, Rotations, Coûts, Ventes, Simulateur et Projections 5 Ans).",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
