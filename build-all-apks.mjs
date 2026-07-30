@@ -46,18 +46,28 @@ try {
     const logoFile = `logo-${mode.flavor}.jpg`;
     if (fs.existsSync(logoFile)) {
         console.log(`Applying logo: ${logoFile}...`);
-        const resDir = path.join(projectRoot, 'android', 'app', 'src', mode.flavor, 'res', 'drawable');
-        if (!fs.existsSync(resDir)) fs.mkdirSync(resDir, { recursive: true });
-        fs.copyFileSync(logoFile, path.join(resDir, 'ic_launcher_foreground.jpg'));
 
-        // Create adaptive icon XML
+        // Define density folders
+        const densities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'];
+
+        for (const density of densities) {
+            const mipmapDir = path.join(projectRoot, 'android', 'app', 'src', mode.flavor, 'res', `mipmap-${density}`);
+            if (!fs.existsSync(mipmapDir)) fs.mkdirSync(mipmapDir, { recursive: true });
+
+            // Copy the JPG as PNG (Android is usually fine with this trick for resources)
+            fs.copyFileSync(logoFile, path.join(mipmapDir, 'ic_launcher.png'));
+            fs.copyFileSync(logoFile, path.join(mipmapDir, 'ic_launcher_round.png'));
+            fs.copyFileSync(logoFile, path.join(mipmapDir, 'ic_launcher_foreground.png'));
+        }
+
+        // Create adaptive icon XML that points to the mipmap foreground
         const anyDpiDir = path.join(projectRoot, 'android', 'app', 'src', mode.flavor, 'res', 'mipmap-anydpi-v26');
         if (!fs.existsSync(anyDpiDir)) fs.mkdirSync(anyDpiDir, { recursive: true });
 
         const adaptiveIcon = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@android:color/black"/>
-    <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
 </adaptive-icon>`;
         fs.writeFileSync(path.join(anyDpiDir, 'ic_launcher.xml'), adaptiveIcon);
         fs.writeFileSync(path.join(anyDpiDir, 'ic_launcher_round.xml'), adaptiveIcon);
