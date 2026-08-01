@@ -371,6 +371,36 @@ export interface AccreditedTaskOption {
   description: string;
 }
 
+export interface WorkerWeeklyTask {
+  day: string;
+  title: string;
+  category: string;
+  description: string;
+}
+
+export interface WorkerHourlyRoutine {
+  timeSlot: string;
+  title: string;
+  category: string;
+  description: string;
+}
+
+export interface CustomJobRole {
+  id: string;
+  role: string;
+  title: string;
+  subTitle: string;
+  description: string;
+  iconEmoji: string;
+  badgeBg: string;
+  borderBg: string;
+  speciesName: "Aviculture" | "Porciculture" | "Multi-Spécifique";
+  defaultTab: string;
+  weeklyTasks: WorkerWeeklyTask[];
+  hourlyRoutine: WorkerHourlyRoutine[];
+  isCustom: boolean;
+}
+
 export interface UserSession {
   id: string;
   username: string; // Login ID or phone or email
