@@ -54,6 +54,19 @@ export interface CustomApkFeatureCalculatedOutput {
   status?: "OK" | "WARNING" | "CRITICAL" | "INFO";
 }
 
+export interface ModuleWorkerTask {
+  id: string;
+  title: string;
+  assignedWorker: string;
+  workerRole?: string;
+  timeOrSchedule: string;
+  priority: "Critique" | "Urgente" | "Normale" | "Basse";
+  isCompleted: boolean;
+  completedAt?: string;
+  completedByWorker?: string;
+  instructions?: string;
+}
+
 export interface CustomApkFeature {
   id: string;
   title: string;
@@ -67,6 +80,7 @@ export interface CustomApkFeature {
   calculationLogicDescription: string;
   defaultOutputs: CustomApkFeatureCalculatedOutput[];
   recommendations: string[];
+  workerTasks?: ModuleWorkerTask[];
   isInstalled: boolean;
 }
 
@@ -360,12 +374,14 @@ export interface AccreditedTaskOption {
 export interface UserSession {
   id: string;
   username: string; // Login ID or phone or email
+  email?: string; // Recognized email e.g. atsegillesbrice@gmail.com
   passwordPlainText?: string; // Encrypted/Local simulation
   fullName: string;
   firstNames?: string;
   phone: string;
   role: UserRole;
   department: DepartmentCategory;
+  assignedWorkerRole?: "VOLAILLER" | "PORCHER" | "RESPONSABLE_GLOBAL";
   isActivatedByAdmin: boolean;
   activatedByManagerId?: string;
   activatedByManagerName?: string;

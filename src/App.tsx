@@ -27,6 +27,9 @@ import { AIAdvisorModal } from "./components/AIAdvisorModal";
 import { ExportReportModal } from "./components/ExportReportModal";
 import { AuthSessionManagementModal } from "./components/AuthSessionManagementModal";
 import { APKInstallModeModal } from "./components/APKInstallModeModal";
+import { OnboardingGuideModal } from "./components/OnboardingGuideModal";
+import { DailyAISynthesisModal } from "./components/DailyAISynthesisModal";
+import { AppLockScreen } from "./components/AppLockScreen";
 import { getApkInstallMode } from "./utils/apkInstallStore";
 import { getCurrentUserSession } from "./data/authStore";
 import { UserSession, ApkInstallMode } from "./types";
@@ -138,10 +141,42 @@ export default function App() {
   // User Session & Auth state
   const [currentUserSession, setCurrentUserSession] = useState<UserSession>(getCurrentUserSession());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
 
   // APK Installation Mode state (ADMINISTRATION_GENERALE | AVIVOIRE | PORCIVOIRE)
   const [apkInstallMode, setApkInstallMode] = useState<ApkInstallMode>(() => getApkInstallMode());
   const [isApkInstallModalOpen, setIsApkInstallModalOpen] = useState<boolean>(false);
+
+  // Handle successful unlock from AppLockScreen (email recognition & automatic UI adapt)
+  const handleAppUnlocked = (user: UserSession) => {
+    setCurrentUserSession(user);
+    setIsUnlocked(true);
+
+    // Reinstallation & Email recognition logic: Auto-adapt interface & APK mode
+    if (user.assignedWorkerRole === "PORCHER" || user.email?.includes("porcivoire") || user.department === "Porciculture") {
+      setApkInstallMode("PORCIVOIRE");
+      setActiveTab("tasks_health");
+    } else if (user.assignedWorkerRole === "VOLAILLER" || user.email?.includes("avivoire") || user.department === "Aviculture") {
+      setApkInstallMode("AVIVOIRE");
+      setActiveTab("tasks_health");
+    } else if (user.role === "ADMIN_GENERAL") {
+      setApkInstallMode("ADMINISTRATION_GENERALE");
+    }
+  };
+
+  // Onboarding & Daily Synthesis Modal States
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState<boolean>(false);
+  const [isDailySynthesisModalOpen, setIsDailySynthesisModalOpen] = useState<boolean>(false);
+
+  // Auto trigger onboarding on first access of a mode if not dismissed
+  useEffect(() => {
+    try {
+      const dismissed = localStorage.getItem(`ivoire_onboarding_dismissed_${apkInstallMode}`);
+      if (dismissed !== "true") {
+        setIsOnboardingModalOpen(true);
+      }
+    } catch (e) {}
+  }, [apkInstallMode]);
 
   // Auto redirect if active tab is hidden in current APK mode
   useEffect(() => {
@@ -241,6 +276,12 @@ export default function App() {
 
   return (
     <div className={`min-h-screen font-sans antialiased flex flex-col transition-colors duration-300 ${effectiveDarkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-100 text-slate-900"}`}>
+      
+      {/* PASSWORD GATEKEEPER BEFORE DISPLAYING ANY APPLICATION INTERFACE */}
+      {!isUnlocked && (
+        <AppLockScreen onUnlocked={handleAppUnlocked} />
+      )}
+
       {/* Main Header & Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -257,6 +298,7 @@ export default function App() {
         onOpenDateRestore={() => setIsDateRestoreOpen(true)}
         apkInstallMode={apkInstallMode}
         onOpenApkInstallModal={() => setIsApkInstallModalOpen(true)}
+        onOpenOnboardingModal={() => setIsOnboardingModalOpen(true)}
       />
 
       {/* Offline Status & Local Cache Banner */}
@@ -346,7 +388,13 @@ export default function App() {
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === "dashboard" && (
-          <DashboardView unitCosts={unitCosts} setActiveTab={handleSetActiveTab} />
+          <DashboardView
+            unitCosts={unitCosts}
+            setActiveTab={handleSetActiveTab}
+            apkInstallMode={apkInstallMode}
+            onOpenDailySynthesis={() => setIsDailySynthesisModalOpen(true)}
+            onOpenOnboardingGuide={() => setIsOnboardingModalOpen(true)}
+          />
         )}
 
         {activeTab === "financial_dashboard" && (
@@ -498,6 +546,19 @@ export default function App() {
             setCurrentUserSession(updatedUser);
           }
         }}
+      />
+
+      <OnboardingGuideModal
+        isOpen={isOnboardingModalOpen}
+        onClose={() => setIsOnboardingModalOpen(false)}
+        apkMode={apkInstallMode}
+        onOpenApkInstallModal={() => setIsApkInstallModalOpen(true)}
+      />
+
+      <DailyAISynthesisModal
+        isOpen={isDailySynthesisModalOpen}
+        onClose={() => setIsDailySynthesisModalOpen(false)}
+        apkMode={apkInstallMode}
       />
     </div>
   );
