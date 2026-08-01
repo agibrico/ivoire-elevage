@@ -231,6 +231,91 @@ Assure-toi que les valeurs par défaut, les calculs et les conseils soient parfa
     }
   });
 
+  // API Route for Gemini Worker Role & Job Sheet Generator
+  app.post("/api/ai/role-builder", async (req, res) => {
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(400).json({
+          error: "Clé API Gemini non configurée. Veuillez définir GEMINI_API_KEY dans vos secrets.",
+        });
+      }
+
+      const { prompt, apkMode } = req.body;
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build",
+          },
+        },
+      });
+
+      const systemInstruction = `
+Tu es un Expert Consultant RH et Directeur d'Exploitation Agro-Pastorale pour IVOIRE ÉLEVAGE.
+Ta mission est de créer un NOUVEAU MÉTIER (Poste de travail) complet avec sa fiche de poste détaillée.
+
+TU DOIS RÉPONDRE EXCLUSIVEMENT PAR UN OBJET JSON VALIDE respectant la structure suivante (SANS MARKDOWN) :
+
+{
+  "role": "NOM_TECHNIQUE_CODE",
+  "title": "Titre du Métier (ex: Meunier & Responsable Fabrique)",
+  "subTitle": "Sous-titre (ex: Spécialiste Nutrition Animale)",
+  "description": "Description concise du rôle et des enjeux (2-3 phrases).",
+  "iconEmoji": "💼",
+  "badgeBg": "bg-slate-900 text-white font-black",
+  "borderBg": "border-slate-800",
+  "speciesName": "Aviculture" | "Porciculture" | "Multi-Spécifique",
+  "defaultTab": "volailler" | "porcher" | "global",
+  "weeklyTasks": [
+    { "day": "Lundi", "title": "Tâche principale", "category": "Gestion", "description": "Explication détaillée..." },
+    { "day": "Mardi", ... },
+    { "day": "Mercredi", ... },
+    { "day": "Jeudi", ... },
+    { "day": "Vendredi", ... },
+    { "day": "Samedi", ... },
+    { "day": "Dimanche", ... }
+  ],
+  "hourlyRoutine": [
+    { "timeSlot": "06:00", "title": "Routine Matin", "category": "Sanitaire", "description": "Détails..." },
+    { "timeSlot": "08:00", ... },
+    { "timeSlot": "11:00", ... },
+    { "timeSlot": "14:00", ... },
+    { "timeSlot": "16:00", ... },
+    { "timeSlot": "18:00", "title": "Clôture", "category": "Rapport", "description": "..." }
+  ]
+}
+
+Assure-toi que les tâches soient réalistes pour l'élevage en Côte d'Ivoire. Génère exactement 7 tâches hebdomadaires (une par jour) et au moins 6 créneaux horaires pour la routine journalière.
+`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${systemInstruction}\n\nMode APK: ${apkMode}\n\nDemande de nouveau métier : ${prompt}`,
+              },
+            ],
+          },
+        ],
+      });
+
+      let responseText = response.text || "";
+      responseText = responseText.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+      const roleJson = JSON.parse(responseText);
+      res.json({ success: true, role: roleJson });
+    } catch (err: any) {
+      console.error("Erreur serveur Gemini Role Builder:", err);
+      res.status(500).json({
+        error: "Erreur lors de la génération du métier : " + (err.message || "Erreur inconnue"),
+      });
+    }
+  });
+
   // API Route for Daily AI Synthesis specific to APK Mode (AVIVOIRE / PORCIVOIRE / ADMIN)
   app.post("/api/ai/daily-synthesis", async (req, res) => {
     try {
