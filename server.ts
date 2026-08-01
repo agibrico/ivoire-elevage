@@ -146,8 +146,19 @@ TU DOIS RÉPONDRE EXCLUSIVEMENT PAR UN OBJET JSON VALIDE respectant la structure
     }
   ],
   "recommendations": [
-    "Recommandation 1 actionnable sur le terrain",
+    "Recommandation 1 actionnable sur the terrain",
     "Recommandation 2 en cas de dépassement des seuils"
+  ],
+  "workerTasks": [
+    {
+      "id": "wt_1",
+      "title": "Relevé et inspection des équipements du bâtiment",
+      "assignedWorker": "Kouadio (Technicien Volaille)",
+      "timeOrSchedule": "Chaque matin à 07h30",
+      "priority": "Urgente",
+      "isCompleted": false,
+      "instructions": "Vérifier le bon fonctionnement et consigner les chiffres."
+    }
   ]
 }
 
@@ -216,6 +227,82 @@ Assure-toi que les valeurs par défaut, les calculs et les conseils soient parfa
       console.error("Erreur serveur Gemini Feature Builder:", err);
       res.status(500).json({
         error: "Erreur lors de la génération de la fonctionnalité APK : " + (err.message || "Erreur inconnue"),
+      });
+    }
+  });
+
+  // API Route for Daily AI Synthesis specific to APK Mode (AVIVOIRE / PORCIVOIRE / ADMIN)
+  app.post("/api/ai/daily-synthesis", async (req, res) => {
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(400).json({
+          error: "Clé API Gemini non configurée. Veuillez définir GEMINI_API_KEY dans vos secrets.",
+        });
+      }
+
+      const { apkMode, recentData, date } = req.body;
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build",
+          },
+        },
+      });
+
+      const modeTitle =
+        apkMode === "AVIVOIRE"
+          ? "AVIVOIRE - Direction Aviculture & Volailles"
+          : apkMode === "PORCIVOIRE"
+          ? "PORCIVOIRE - Direction Porciculture & Maternité"
+          : "ADMINISTRATION GÉNÉRALE - Holding Agro-Pastorale Globale";
+
+      const systemInstruction = `
+Tu es le Directeur d'Exploitation & Analyste IA Senior pour IVOIRE ÉLEVAGE.
+Ta mission est de générer la SYNTHÈSE IA QUOTIDIENNE officielle du ${date || new Date().toLocaleDateString("fr-FR")}.
+
+SÉLECTION ET FOCUS DU MODE ACTUEL: ${modeTitle}
+
+Instruis et structure ton rapport précisément en Français avec une présentation professionnelle, claire, chiffrée et ultra-pratique pour le chef d'exploitation et les techniciens terrain.
+
+STRUCTURE OBLIGATOIRE DE LA SYNTHÈSE QUOTIDIENNE :
+1. 📊 BILAN DES RÉSULTATS & MOUVEMENTS RÉCENTS DU MODE (${modeTitle})
+   - Analyse chiffrée des effectifs récents, des lots actifs et des mouvements constatés.
+2. ⚠️ ALERTES CRITIQUES & POINTS DE VIGILANCE DU JOUR
+   - Consommations d'aliment/eau, niveaux de stock restants, rappels sanitaires J-5 et risques de mortalité.
+3. 📋 FEUILLE DE ROUTE & ORDRES DE MISSION POUR LE PERSONNEL
+   - Tâches prioritaires assignées aux techniciens et ouvriers (ex: Kouadio, Yao, Bamba, Awa, Konan).
+4. 💰 INDICATEURS FINANCIERS & OBJECTIFS DU JOUR
+   - Estimation des marges, recettes de ventes prévues et conseils d'optimisation des coûts d'aliments.
+
+Adapte strictly la terminologie :
+- Pour AVIVOIRE : Poulets de chair, pondeuses, alvéoles d'œufs, litière, vaccins HB1/Gumboro, aliments démarrage/croissance/finition.
+- Pour PORCIVOIRE : Porcs en engraissement, truies gestantes/allaitantes, porcelets sous-mère, fer dextran, verraterie, carcasses.
+- Pour ADMIN : Consolidation globale de la holding (Aviculture + Porciculture).
+`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${systemInstruction}\n\nDonnées récentes saisies dans l'application pour ce mode:\n${JSON.stringify(
+                  recentData || {}
+                )}\n\nGénère la Synthèse IA Quotidienne complète.`,
+              },
+            ],
+          },
+        ],
+      });
+
+      res.json({ synthesis: response.text });
+    } catch (err: any) {
+      console.error("Erreur serveur Gemini Daily Synthesis:", err);
+      res.status(500).json({
+        error: "Erreur lors de la génération de la synthèse quotidienne : " + (err.message || "Erreur inconnue"),
       });
     }
   });

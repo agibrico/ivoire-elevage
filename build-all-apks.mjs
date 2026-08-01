@@ -5,7 +5,9 @@ import path from 'path';
 const modes = [
   { id: 'ADMINISTRATION_GENERALE', flavor: 'admin', outputName: 'ivoire-admin.apk' },
   { id: 'AVIVOIRE', flavor: 'avivoire', outputName: 'avivoire.apk' },
-  { id: 'PORCIVOIRE', flavor: 'porcivoire', outputName: 'porcivoire.apk' }
+  { id: 'PORCIVOIRE', flavor: 'porcivoire', outputName: 'porcivoire.apk' },
+  { id: 'AVIVOIRE', role: 'VOLAILLER', flavor: 'volailler', outputName: 'volailler.apk', logoRef: 'avivoire' },
+  { id: 'PORCIVOIRE', role: 'PORCHER', flavor: 'porcher', outputName: 'porcher.apk', logoRef: 'porcivoire' }
 ];
 
 const projectRoot = process.cwd();
@@ -33,9 +35,16 @@ try {
 
     // 1. Build Web App
     console.log('Building web assets...');
+    const buildEnv = {
+        ...env,
+        VITE_APK_MODE: mode.id,
+        VITE_API_URL: "https://ivoire-elevage.onrender.com"
+    };
+    if (mode.role) buildEnv.VITE_WORKER_ROLE = mode.role;
+
     execSync(`"C:\\Program Files\\nodejs\\npm.cmd" run build`, {
       stdio: 'inherit',
-      env: { ...env, VITE_APK_MODE: mode.id }
+      env: buildEnv
     });
 
     // 2. Sync with Capacitor
@@ -43,7 +52,7 @@ try {
     execSync('"C:\\Program Files\\nodejs\\npx.cmd" cap sync android', { stdio: 'inherit', env });
 
     // 3. Apply Logos for each flavor
-    const logoFile = `logo-${mode.flavor}.jpg`;
+    const logoFile = `logo-${mode.logoRef || mode.flavor}.jpg`;
     if (fs.existsSync(logoFile)) {
         console.log(`Applying logo: ${logoFile}...`);
 
